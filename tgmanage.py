@@ -5,13 +5,13 @@ import asyncio
 import sys
 import certifi
 
-# KONFIGURASI REMOTE - Pastikan Remote MySQL sudah di-allow di cPanel
+# KONFIGURASI REMOTE
 DB_CONFIG = {
     'host': "novus.web.id",
     'user': "novus_adminpiket",
     'password': "Syakirah@2026!",
     'database': "novus_piketdb",
-    'connect_timeout': 10
+    'connect_timeout': 15
 }
 
 def init_db():
@@ -33,7 +33,6 @@ def init_db():
         conn.close()
     except Exception as e:
         print(f"❌ Database Error: {e}")
-        print("💡 Tips: Pastikan Remote MySQL sudah di-allow di cPanel.")
         sys.exit()
 
 async def login_new():
@@ -50,7 +49,7 @@ async def login_new():
             cursor.execute(query, (me.id, me.username, me.phone_number, name, ss))
             conn.commit()
             conn.close()
-            print(f"✅ Akun {name} disimpan secara Cloud!")
+            print(f"✅ Akun {name} disimpan ke Cloud!")
     except Exception as e:
         print(f"❌ Gagal: {e}")
 
@@ -61,9 +60,9 @@ async def account_menu(acc_data):
         print(f"👤 CLOUD INFO: {name}")
         print(f"📱 Phone: +{phone} | ID: {user_id}")
         print("="*45)
-        print("1. Lihat Kode Masuk (+42777)")
-        print("2. Lihat Pesan @NoxticaUserbot") # Fitur Baru
-        print("3. Lihat Pesan Username Lain")
+        print("1. Lihat Kode Masuk (+42777) [10 Pesan]")
+        print("2. Lihat Pesan @NoxticaUserbot [50 Pesan]")
+        print("3. Lihat Pesan Username Lain [10 Pesan]")
         print("4. Lihat Perangkat Login")
         print("5. Hapus Akun dari Cloud")
         print("6. Kembali")
@@ -73,16 +72,21 @@ async def account_menu(acc_data):
             try:
                 async with Client("viewer", session_string=ss, in_memory=True) as app:
                     if choice == '1':
-                        print("\n📩 Pesan dari Telegram Official:")
+                        print("\n📩 10 Pesan Terakhir dari Telegram Official:")
                         async for m in app.get_chat_history(777000, limit=10):
-                            print(f"[{m.date.strftime('%H:%M')}] {m.text}")
+                            print(f"[{m.date.strftime('%d/%m %H:%M')}] {m.text}")
                     
                     elif choice == '2':
-                        print("\n🔍 Mengambil pesan dari @NoxticaUserbot...")
-                        async for msg in app.get_chat_history("NoxticaUserbot", limit=10):
-                            sender = msg.from_user.first_name if msg.from_user else "System"
+                        print("\n🔍 Mengambil 50 pesan terakhir dari @NoxticaUserbot...")
+                        print("-" * 50)
+                        count = 0
+                        async for msg in app.get_chat_history("NoxticaUserbot", limit=50):
+                            count += 1
+                            sender = "BOT" if msg.from_user and msg.from_user.is_bot else (msg.from_user.first_name if msg.from_user else "System")
                             text = msg.text or msg.caption or "[Media/Non-Teks]"
-                            print(f"[{msg.date.strftime('%H:%M')}] {sender}: {text}")
+                            print(f"{count}. [{msg.date.strftime('%H:%M:%S')}] {sender}: {text}")
+                        print("-" * 50)
+                        print(f"✅ Selesai mengambil {count} pesan.")
                     
                     elif choice == '3':
                         target = input("Masukkan Username/ID: ")
@@ -93,30 +97,29 @@ async def account_menu(acc_data):
                     elif choice == '4':
                         sessions = await app.invoke(functions.account.GetAuthorizations())
                         for i, s in enumerate(sessions.authorizations):
-                            curr = "[INI]" if s.current else ""
+                            curr = "[AKTIF]" if s.current else ""
                             print(f"{i+1}. {s.device_model} ({s.platform}) | {s.ip} {curr}")
             
             except Exception as e: 
-                print(f"❌ Gagal: {e}")
+                print(f"❌ Terjadi kesalahan: {e}")
         
         elif choice == '5':
-            conn = mysql.connector.connect(**DB_CONFIG)
-            cursor = conn.cursor()
-            cursor.execute("DELETE FROM tg_accounts WHERE id=%s",(db_id,))
-            conn.commit(); conn.close()
-            print("🗑️ Akun berhasil dihapus dari Cloud.")
-            break
+            confirm = input("Hapus akun ini dari Cloud? (y/n): ")
+            if confirm.lower() == 'y':
+                conn = mysql.connector.connect(**DB_CONFIG)
+                cursor = conn.cursor()
+                cursor.execute("DELETE FROM tg_accounts WHERE id=%s",(db_id,))
+                conn.commit(); conn.close()
+                print("🗑️ Berhasil dihapus.")
+                break
         elif choice == '6': 
             break
 
 async def main():
     init_db()
     while True:
-        print("\n🚀 TG-CLOUD MANAGER V4 (Sync)")
-        print("-" * 30)
-        print("1. Akun Tersimpan")
-        print("2. Login Baru")
-        print("3. Keluar")
+        print("\n🚀 TG-CLOUD MANAGER V4.1 (Sync)")
+        print("1. Akun Tersimpan | 2. Login Baru | 3. Keluar")
         m = input("\nPilih: ")
         
         if m == '1':
@@ -144,7 +147,6 @@ async def main():
         elif m == '2': 
             await login_new()
         elif m == '3': 
-            print("Sampai jumpa, Katsu!")
             break
 
 if __name__ == "__main__":
